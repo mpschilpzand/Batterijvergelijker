@@ -10,6 +10,14 @@ De bronbestanden staan in `model/`:
 - `Huishoudprofiel verrekenprijs 2025.xlsx`
 - `Scenarios verrekenprijs batterij.xlsx`
 
+Excelbestanden worden niet in GitHub opgeslagen. Voor deployment gebruikt de
+app daarom `model/runtime_model.json`, een export met alleen de benodigde
+uurreeksen en aannames. Genereer die opnieuw uit je lokale Excelbestand met:
+
+```shell
+python3 tools/export_runtime_model.py
+```
+
 ## Python-rekenmodel
 
 `model/calculator.py` bevat een directe Pythonvertaling van:

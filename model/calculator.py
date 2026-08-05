@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from .xlsx_reader import Workbook, column_cells
+from .xlsx_reader import Workbook
 
 HOURS = 8760
+DEFAULT_RUNTIME_MODEL = Path(__file__).with_name("runtime_model.json")
 
 
 @dataclass(frozen=True)
@@ -163,6 +165,10 @@ def load_standard_profile_model(
     path: str | Path,
     overrides: dict[str, float] | None = None,
 ) -> tuple[Assumptions, list[Hour]]:
+    path = Path(path)
+    if not path.exists() and DEFAULT_RUNTIME_MODEL.exists():
+        return load_runtime_model(DEFAULT_RUNTIME_MODEL, overrides)
+
     assumptions, hours = load_model(path, overrides)
     with Workbook(path) as workbook:
         standard = workbook.sheet("Aannames stdprofielen")
@@ -188,6 +194,14 @@ def load_standard_profile_model(
 
 
 def _standard_profile_shapes(path: str | Path) -> tuple[list[float], list[float]]:
+    path = Path(path)
+    if not path.exists() and DEFAULT_RUNTIME_MODEL.exists():
+        assumptions, hours = load_runtime_model(DEFAULT_RUNTIME_MODEL)
+        return (
+            [hour.usage / assumptions.annual_usage_kwh for hour in hours],
+            [hour.solar / assumptions.annual_solar_kwh for hour in hours],
+        )
+
     with Workbook(path) as workbook:
         standard = workbook.sheet("Aannames stdprofielen")
         usage_shape = [
@@ -197,6 +211,57 @@ def _standard_profile_shapes(path: str | Path) -> tuple[list[float], list[float]
             _number(standard, f"G{row}") / 4500.0 for row in range(16, HOURS + 16)
         ]
     return usage_shape, solar_shape
+
+
+def load_runtime_model(
+    path: str | Path = DEFAULT_RUNTIME_MODEL,
+    overrides: dict[str, float] | None = None,
+) -> tuple[Assumptions, list[Hour]]:
+    overrides = overrides or {}
+    with Path(path).open(encoding="utf-8") as file:
+        payload = json.load(file)
+
+    values = dict(payload["assumptions"])
+    base_annual_usage = values["annual_usage_kwh"]
+    base_annual_solar = values["annual_solar_kwh"]
+    unknown = set(overrides) - set(values)
+    if unknown:
+        raise KeyError(f"Unknown assumptions: {sorted(unknown)}")
+    values.update(overrides)
+    assumptions = Assumptions(**values)
+    usage_factor = 0.0
+    if base_annual_usage != 0.0:
+        usage_factor = assumptions.annual_usage_kwh / base_annual_usage
+    solar_factor = 0.0
+    if base_annual_solar != 0.0:
+        solar_factor = assumptions.annual_solar_kwh / base_annual_solar
+    hours = [
+        Hour(
+            **(
+                hour
+                | {
+                    "usage": hour["usage"] * usage_factor,
+                    "solar": hour["solar"] * solar_factor,
+                }
+            )
+        )
+        for hour in payload["hours"]
+    ]
+    return assumptions, hours
+
+
+def export_runtime_model(
+    source: str | Path,
+    target: str | Path = DEFAULT_RUNTIME_MODEL,
+) -> None:
+    assumptions, hours = load_standard_profile_model(source)
+    payload = {
+        "source": Path(source).name,
+        "hours": [hour.__dict__ for hour in hours],
+        "assumptions": assumptions.__dict__,
+    }
+    with Path(target).open("w", encoding="utf-8") as file:
+        json.dump(payload, file, separators=(",", ":"))
 
 
 def _grid_flows_from_shapes(

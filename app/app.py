@@ -10,12 +10,21 @@ sys.path.insert(0, str(ROOT))
 
 from model.calculator import (
     CostResult,
+    DEFAULT_RUNTIME_MODEL,
     ModelResult,
     calculate_standard_profiles,
     infer_annual_usage_solar_from_grid,
 )
 
 MODEL = ROOT / "model" / "Huishoudprofiel verrekenprijs 2025.xlsx"
+
+
+def model_revision() -> int:
+    if MODEL.exists():
+        return MODEL.stat().st_mtime_ns
+    if DEFAULT_RUNTIME_MODEL.exists():
+        return DEFAULT_RUNTIME_MODEL.stat().st_mtime_ns
+    return 0
 
 
 def apply_theme() -> None:
@@ -235,7 +244,7 @@ with st.spinner("Scenario’s berekenen…"):
         battery_capacity,
         grid_import,
         grid_export,
-        MODEL.stat().st_mtime_ns,
+        model_revision(),
     )
 
 baseline_cost = result.baseline_costs.opex_inc_vat
