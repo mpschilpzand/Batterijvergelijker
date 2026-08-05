@@ -177,28 +177,33 @@ def load_standard_profile_model(
             "with tools/export_runtime_model.py or provide the source Excel file."
         )
 
-    assumptions, hours = load_model(path, overrides)
-    with Workbook(path) as workbook:
-        standard = workbook.sheet("Aannames stdprofielen")
-        result = []
-        for index, hour in enumerate(hours, start=16):
-            result.append(
-                Hour(
-                    timestamp=hour.timestamp,
-                    usage=_number(standard, f"E{index}")
-                    * assumptions.annual_usage_kwh
-                    / 4000.0,
-                    solar=_number(standard, f"G{index}")
-                    * assumptions.annual_solar_kwh
-                    / 4500.0,
-                    epex_mwh=hour.epex_mwh,
-                    simple_peak=hour.simple_peak,
-                    simple_day_max_price=hour.simple_day_max_price,
-                    lend_transformer_power=hour.lend_transformer_power,
-                    lend_peak=hour.lend_peak,
+    try:
+        assumptions, hours = load_model(path, overrides)
+        with Workbook(path) as workbook:
+            standard = workbook.sheet("Aannames stdprofielen")
+            result = []
+            for index, hour in enumerate(hours, start=16):
+                result.append(
+                    Hour(
+                        timestamp=hour.timestamp,
+                        usage=_number(standard, f"E{index}")
+                        * assumptions.annual_usage_kwh
+                        / 4000.0,
+                        solar=_number(standard, f"G{index}")
+                        * assumptions.annual_solar_kwh
+                        / 4500.0,
+                        epex_mwh=hour.epex_mwh,
+                        simple_peak=hour.simple_peak,
+                        simple_day_max_price=hour.simple_day_max_price,
+                        lend_transformer_power=hour.lend_transformer_power,
+                        lend_peak=hour.lend_peak,
+                    )
                 )
-            )
-    return assumptions, result
+        return assumptions, result
+    except zipfile.BadZipFile:
+        if DEFAULT_RUNTIME_MODEL.exists():
+            return load_runtime_model(DEFAULT_RUNTIME_MODEL, overrides)
+        raise
 
 
 def _standard_profile_shapes(path: str | Path) -> tuple[list[float], list[float]]:
@@ -216,15 +221,24 @@ def _standard_profile_shapes(path: str | Path) -> tuple[list[float], list[float]
             [hour.solar / assumptions.annual_solar_kwh for hour in hours],
         )
 
-    with Workbook(path) as workbook:
-        standard = workbook.sheet("Aannames stdprofielen")
-        usage_shape = [
-            _number(standard, f"E{row}") / 4000.0 for row in range(16, HOURS + 16)
-        ]
-        solar_shape = [
-            _number(standard, f"G{row}") / 4500.0 for row in range(16, HOURS + 16)
-        ]
-    return usage_shape, solar_shape
+    try:
+        with Workbook(path) as workbook:
+            standard = workbook.sheet("Aannames stdprofielen")
+            usage_shape = [
+                _number(standard, f"E{row}") / 4000.0 for row in range(16, HOURS + 16)
+            ]
+            solar_shape = [
+                _number(standard, f"G{row}") / 4500.0 for row in range(16, HOURS + 16)
+            ]
+        return usage_shape, solar_shape
+    except zipfile.BadZipFile:
+        if DEFAULT_RUNTIME_MODEL.exists():
+            assumptions, hours = load_runtime_model(DEFAULT_RUNTIME_MODEL)
+            return (
+                [hour.usage / assumptions.annual_usage_kwh for hour in hours],
+                [hour.solar / assumptions.annual_solar_kwh for hour in hours],
+            )
+        raise
 
 
 def load_runtime_model(
