@@ -1,0 +1,14 @@
+{
+  "model_file": "../Huishoudprofiel verrekenprijs 2025.xlsx",
+  "inputs": {
+    "annual_usage_kwh": {
+      "sheet": "Aannames",
+      "cell": "B5"
+    },
+    "annual_solar_kwh": {
+      "sheet": "Aannames",
+      "cell": "B6"
+    }
+  },
+  "results": {}
+}

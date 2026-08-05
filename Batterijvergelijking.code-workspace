@@ -1,0 +1,19 @@
+{
+  "folders": [
+    {
+      "name": "Batterijvergelijking",
+      "path": "."
+    },
+    {
+      "name": "Bestaand Excelmodel",
+      "path": ".."
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/~$*.xlsx": true,
+      "**/__pycache__": true
+    },
+    "editor.formatOnSave": true
+  }
+}

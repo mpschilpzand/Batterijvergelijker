@@ -1,0 +1,27 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv
+venv/
+env/
+
+# Editor
+.vscode/
+.DS_Store
+
+# Output and build
+output/
+
+# Excel and related spreadsheet files (excluded from repo)
+*.xls
+*.xlsx
+*.xlsm
+*.xlsb
+
+# Optional large data folders (uncomment if you want to ignore whole folders)
+# Bestaand Excelmodel/
+# european_wholesale_electricity_price_data_hourly/
