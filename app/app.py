@@ -223,7 +223,7 @@ with st.sidebar:
         step=100.0,
     )
     annual_usage, annual_solar = infer_annual_usage_solar_from_grid(
-        MODEL,
+        active_model_path(),
         grid_import,
         grid_export,
     )
