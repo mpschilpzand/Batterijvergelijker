@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import zipfile
 from pathlib import Path
 
 import streamlit as st
@@ -20,7 +21,7 @@ RUNTIME_MODEL = ROOT / "model" / "runtime_model.json"
 
 
 def active_model_path() -> Path:
-    if MODEL.exists():
+    if MODEL.exists() and zipfile.is_zipfile(MODEL):
         return MODEL
     return RUNTIME_MODEL
 

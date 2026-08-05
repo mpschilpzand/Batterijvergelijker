@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -168,7 +169,7 @@ def load_standard_profile_model(
     path = Path(path)
     if path.suffix == ".json":
         return load_runtime_model(path, overrides)
-    if not path.exists():
+    if not path.exists() or not zipfile.is_zipfile(path):
         if DEFAULT_RUNTIME_MODEL.exists():
             return load_runtime_model(DEFAULT_RUNTIME_MODEL, overrides)
         raise FileNotFoundError(
@@ -202,7 +203,7 @@ def load_standard_profile_model(
 
 def _standard_profile_shapes(path: str | Path) -> tuple[list[float], list[float]]:
     path = Path(path)
-    if path.suffix == ".json" or not path.exists():
+    if path.suffix == ".json" or not path.exists() or not zipfile.is_zipfile(path):
         runtime_path = path if path.suffix == ".json" else DEFAULT_RUNTIME_MODEL
         if not runtime_path.exists():
             raise FileNotFoundError(
