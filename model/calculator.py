@@ -166,8 +166,15 @@ def load_standard_profile_model(
     overrides: dict[str, float] | None = None,
 ) -> tuple[Assumptions, list[Hour]]:
     path = Path(path)
-    if not path.exists() and DEFAULT_RUNTIME_MODEL.exists():
-        return load_runtime_model(DEFAULT_RUNTIME_MODEL, overrides)
+    if path.suffix == ".json":
+        return load_runtime_model(path, overrides)
+    if not path.exists():
+        if DEFAULT_RUNTIME_MODEL.exists():
+            return load_runtime_model(DEFAULT_RUNTIME_MODEL, overrides)
+        raise FileNotFoundError(
+            f"Model file not found: {path}. Generate {DEFAULT_RUNTIME_MODEL.name} "
+            "with tools/export_runtime_model.py or provide the source Excel file."
+        )
 
     assumptions, hours = load_model(path, overrides)
     with Workbook(path) as workbook:
@@ -195,8 +202,14 @@ def load_standard_profile_model(
 
 def _standard_profile_shapes(path: str | Path) -> tuple[list[float], list[float]]:
     path = Path(path)
-    if not path.exists() and DEFAULT_RUNTIME_MODEL.exists():
-        assumptions, hours = load_runtime_model(DEFAULT_RUNTIME_MODEL)
+    if path.suffix == ".json" or not path.exists():
+        runtime_path = path if path.suffix == ".json" else DEFAULT_RUNTIME_MODEL
+        if not runtime_path.exists():
+            raise FileNotFoundError(
+                f"Model file not found: {path}. Generate {DEFAULT_RUNTIME_MODEL.name} "
+                "with tools/export_runtime_model.py or provide the source Excel file."
+            )
+        assumptions, hours = load_runtime_model(runtime_path)
         return (
             [hour.usage / assumptions.annual_usage_kwh for hour in hours],
             [hour.solar / assumptions.annual_solar_kwh for hour in hours],

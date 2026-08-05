@@ -19,11 +19,16 @@ MODEL = ROOT / "model" / "Huishoudprofiel verrekenprijs 2025.xlsx"
 RUNTIME_MODEL = ROOT / "model" / "runtime_model.json"
 
 
-def model_revision() -> int:
+def active_model_path() -> Path:
     if MODEL.exists():
-        return MODEL.stat().st_mtime_ns
-    if RUNTIME_MODEL.exists():
-        return RUNTIME_MODEL.stat().st_mtime_ns
+        return MODEL
+    return RUNTIME_MODEL
+
+
+def model_revision() -> int:
+    model_path = active_model_path()
+    if model_path.exists():
+        return model_path.stat().st_mtime_ns
     return 0
 
 
@@ -131,18 +136,19 @@ def number(value: float, decimals: int = 0) -> str:
 
 @st.cache_data(show_spinner=False)
 def run_model(
+    model_path: str,
     battery_capacity: float,
     grid_import: float,
     grid_export: float,
     model_revision: int,
 ) -> ModelResult:
     annual_usage, annual_solar = infer_annual_usage_solar_from_grid(
-        MODEL,
+        model_path,
         grid_import,
         grid_export,
     )
     return calculate_standard_profiles(
-        MODEL,
+        model_path,
         {
             "battery_capacity": battery_capacity,
             "max_daily_battery_export": battery_capacity / 3.0,
@@ -193,6 +199,13 @@ st.caption(
     "privébatterij en met een LEND-batterij."
 )
 
+if not active_model_path().exists():
+    st.error(
+        "Modeldata ontbreekt. Voeg `model/runtime_model.json` toe aan de repo "
+        "of genereer het lokaal met `python3 tools/export_runtime_model.py`."
+    )
+    st.stop()
+
 with st.sidebar:
     st.header("Uitgangspunten")
     grid_import = st.number_input(
@@ -240,7 +253,9 @@ if battery_capacity == 0:
     st.info("Bij een batterijgrootte van 0 kWh zijn beide batterijscenario’s gelijk aan elkaar.")
 
 with st.spinner("Scenario’s berekenen…"):
+    model_path = active_model_path()
     result = run_model(
+        str(model_path),
         battery_capacity,
         grid_import,
         grid_export,
