@@ -10,20 +10,20 @@ sys.path.insert(0, str(ROOT))
 
 from model.calculator import (
     CostResult,
-    DEFAULT_RUNTIME_MODEL,
     ModelResult,
     calculate_standard_profiles,
     infer_annual_usage_solar_from_grid,
 )
 
 MODEL = ROOT / "model" / "Huishoudprofiel verrekenprijs 2025.xlsx"
+RUNTIME_MODEL = ROOT / "model" / "runtime_model.json"
 
 
 def model_revision() -> int:
     if MODEL.exists():
         return MODEL.stat().st_mtime_ns
-    if DEFAULT_RUNTIME_MODEL.exists():
-        return DEFAULT_RUNTIME_MODEL.stat().st_mtime_ns
+    if RUNTIME_MODEL.exists():
+        return RUNTIME_MODEL.stat().st_mtime_ns
     return 0
 
 
